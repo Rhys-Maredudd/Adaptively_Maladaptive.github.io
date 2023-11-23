@@ -1,0 +1,927 @@
+---
+title: "Adaptively Maladaptive" 
+description: | 
+  Population Demographics and Statistical Analysis
+author:
+   - Rhys Maredudd Davies, Dr Monja Knoll, Dr Melina Nicole Kyranides,
+   - The University of Edinburgh
+   - School of Health in Social Science 
+email: r.m.m.davies@sms.ed.ac.uk
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    theme: cerulean
+header-includes: |
+    \usepackage{fancyhdr}
+    \pagestyle{fancy}
+    \fancyhead[CO,CE]{This is fancy}
+    \fancyfoot[CO,CE]{So is this}
+    \fancyfoot[LE,RO]{\thepage}
+
+
+---
+
+<style type="text/css">
+
+h1.title {
+  font-size: 48px;
+  color: Black;
+  text-align: center;
+  margin-bottom: 10px
+}
+h4.author { /* Header 4 - and the author and data headers use this too  */
+  font-size: 16px;
+  color: Black;
+  text-align: center;
+}
+h4.date { /* Header 4 - and the author and data headers use this too  */
+  font-size: 12px;
+  color: Black;
+  text-align: center;
+}
+</style>
+
+
+```{r setup, include=FALSE}
+#subtitle: |
+  #![](UoE_Centred Logo_CMYK_v1_160215.jpg){width=1.5in, align = center}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(kableExtra)
+library(readr)
+library(sjPlot)
+library(broom)
+library(gtsummary)
+library(interactions)
+library(correlation)
+library(ltm)
+
+# copy the Uni logo to the current directory
+#file.copy(file.path(R.home("doc"), "html", "UoE_Centred Logo_CMYK_v1_160215"), '.')
+
+# knitr::include_graphics("Corporate logo (all formats)/UoE_Centred Logo_CMYK_v1_160215.png")
+
+#Loading data and tidying for analysis
+df_r <- read_csv("adaptive_maladaptive.csv")
+df <- df_r %>% dplyr::select(Athlete_status, Gender, Age, Education, 
+                    WEMWBS_total, WEMWBS_Z,
+                    GAD_total, GAD_Z,
+                    CERQ_Acceptance, CERQ_Acceptance_Z, 
+                    CERQ_Positive_Refocus, CERQ_Positive_Refocus_Z,
+                    CERQ_Putting_into_Perspective, CERQ_Putting_into_Perspective_Z,
+                    CERQ_Refocus_on_Planning, CERQ_Refocus_on_Planning_Z,
+                    CERQ_Positive_Reappraisal, CERQ_Positive_Reappraisal_Z,
+                    CERQ_Self_Blame, CERQ_Self_Blame_Z, Self_Blame_lvl,
+                    CERQ_Other_Blame, CERQ_Other_Blame_Z, Other_Blame_lvl,
+                    CERQ_Catastrophising, CERQ_Catastrophising_Z, Catastrophising_lvl,
+                    CERQ_Rumination, CERQ_Rumination_Z, Rumination_lvl)  %>%
+  dplyr::mutate(
+            GAD_Quartile = ntile(GAD_Z, 4),
+            GAD_lvl = case_when(
+              GAD_Quartile == "1" ~ "Lower quartile",
+              GAD_Quartile == "2" ~ "Middle quartiles",
+              GAD_Quartile == "3" ~ "Middle quartiles",
+              GAD_Quartile == "4" ~ "Upper quartile",
+            ),
+            Acceptance_Quartile = ntile(CERQ_Acceptance_Z, 4),
+            Acceptance_lvl = case_when(
+              Acceptance_Quartile == "1" ~ "Lower quartile",
+              Acceptance_Quartile == "2" ~ "Middle quartiles",
+              Acceptance_Quartile == "3" ~ "Middle quartiles",
+              Acceptance_Quartile == "4" ~ "Upper quartile",
+            ),
+            Pos_Refocus_Quartile = ntile(CERQ_Positive_Refocus_Z, 4),
+            Pos_Refocus_lvl = case_when(
+              Pos_Refocus_Quartile == "1" ~ "Lower quartile",
+              Pos_Refocus_Quartile == "2" ~ "Middle quartiles",
+              Pos_Refocus_Quartile == "3" ~ "Middle quartiles",
+              Pos_Refocus_Quartile == "4" ~ "Upper quartile",
+            ),
+            Put_Perspective_Quartile = ntile(CERQ_Putting_into_Perspective_Z, 4),
+             Put_Perspective_lvl = case_when(
+              Put_Perspective_Quartile == "1" ~ "Lower quartile",
+              Put_Perspective_Quartile == "2" ~ "Middle quartiles",
+              Put_Perspective_Quartile == "3" ~ "Middle quartiles",
+              Put_Perspective_Quartile == "4" ~ "Upper quartile",
+            ),
+            Refocus_Planning_Quartile = ntile(CERQ_Refocus_on_Planning_Z, 4),
+              Refocus_Planning_lvl = case_when(
+              Refocus_Planning_Quartile == "1" ~ "Lower quartile",
+              Refocus_Planning_Quartile == "2" ~ "Middle quartiles",
+              Refocus_Planning_Quartile == "3" ~ "Middle quartiles",
+              Refocus_Planning_Quartile == "4" ~ "Upper quartile",
+            ),
+            Pos_Reappraisal_Quartile = ntile(CERQ_Positive_Reappraisal_Z, 4),
+             Pos_Reappraisal_lvl = case_when(
+              Pos_Reappraisal_Quartile == "1" ~ "Lower quartile",
+              Pos_Reappraisal_Quartile == "2" ~ "Middle quartiles",
+              Pos_Reappraisal_Quartile == "3" ~ "Middle quartiles",
+              Pos_Reappraisal_Quartile == "4" ~ "Upper quartile",
+            ),
+            Age_Z = scale(Age),
+            Education = case_when(
+            Education == "Doctoral or equivalent" ~  "Doctoral or equivalent",
+            Education == "Masters or equivalent" ~ "Masters or equivalent",
+            Education == "Bachelors or equivalent" ~ "Bachelors or equivalent",
+            Education == "Upper Secondary" ~ "No University Education" , 
+            Education == "Lower Secondary" ~ "No University Education",
+            Education == "Short  Cycle Tertiary" ~ "No University Education" ,
+            Education == "Post Secondary Tertiary" ~ "No University Education")) %>%mutate(across(where(is.character), as.factor))
+
+df[sapply(df, is.character)] <- lapply(df[sapply(df, is.character)], as.factor)
+```
+
+```{css, echo=FALSE}
+.link-style1 a {
+  color: blue;
+  text-decoration: underline;
+}
+
+.link-style2 a {
+ color: blue;
+}
+
+```
+
+
+
+# Analysis 
+
+This document is dedicated the Adaptively Maladaptive research. The aim of this analysis is to investigate how the relationship between anxiety and wellbeing in elite sport populations is influenced by emotion regulation strategies. The analysis aims to test the hypothesis that "maladaptive" emotion regulation strategies would moderate the association between anxiety and mental wellbeing in this population. It is expected that the association between anxiety and mental wellbeing will weaken as the use of “maladaptive" emotion regulation strategies increase. 
+
+Please use the floating table of contents on the side of the screen to navigate between the different analysis sections. This provides you with the opportunity to explore the data from the data at the different levels of the analysis; ranging from the demographics, to the moderation analyses themselves. 
+
+If you have any questions, please ask away - either in person here at the poster presentation, or via email. I'm more than happy to discuss and talk about the research and the presentation.
+
+Email: [r.m.m.davies@sms.ed.ac.uk](mailto:r.m.m.davies@sms.ed.ac.uk)
+
+******
+
+## Sample demographics {.tabset .tabset-pills}
+
+```{r, echo = FALSE, message = FALSE}
+df_demographic <- df %>% dplyr::select(Athlete_status, Gender, Education, Age) %>% rename(`Athlete Status` = Athlete_status)
+
+demog_table_1 <- df_demographic %>% 
+  tbl_summary(
+              type = list(c(`Athlete Status`, Gender, Education) ~ "categorical",
+               Age ~ "continuous"),
+              statistic = list(#all_categorical()~ "{n} / {N} ({p%})",
+                               all_continuous()~ "{mean} ({sd})"
+                               ), 
+              digits = all_continuous() ~ 2)
+
+demog_table_2 <- df_demographic %>% 
+  tbl_summary(by = `Athlete Status` ,
+              type = list(c(`Athlete Status` , Gender, Education) ~ "categorical",
+               Age ~ "continuous"),
+              statistic = list(#all_categorical()~ "{n} / {N} ({p%})",
+                               all_continuous()~ "{mean} ({sd})"
+                               ), 
+              digits = all_continuous() ~ 2)
+
+
+tbl_merge(tbls = list(demog_table_1, demog_table_2),
+          tab_spanner = c("Total", "By Athlete Status")) 
+
+```
+
+*****
+
+## Summary tables {.tabset .tabset-pills}
+
+Below is the summary tables of measures used for this analysis. This has been divided into the Cronbach Alpha's and the measure summaries. 
+
+### Cronbach's alphas
+```{r, echo = FALSE, message = FALSE}
+
+# Compiling alphas
+WEMWBS_alpha <- df_r %>% dplyr::select(WB_1:WB_14) 
+WB <- cronbach.alpha(WEMWBS_alpha)[[1]]
+GAD_alpha <- df_r %>% dplyr::select(GAD1_1:GAD1_7) 
+GAD <- cronbach.alpha(GAD_alpha)[[1]]
+Self_Blame_alpha <- df_r %>% dplyr::select(CERQ_1:CERQ_2) 
+SB <- cronbach.alpha(Self_Blame_alpha)[[1]]
+Other_Blame_alpha <- df_r %>% dplyr::select(CERQ_17:CERQ_18) 
+OB <- cronbach.alpha(Other_Blame_alpha)[[1]]
+Rumination_data <- df_r %>% dplyr::select(CERQ_5:CERQ_6) 
+Rum <- cronbach.alpha(Rumination_data)[[1]]
+Catastr_data <- df_r %>% dplyr::select(CERQ_15:CERQ_16) 
+Cat <- cronbach.alpha(Catastr_data)[[1]]
+Accep_data <- df_r %>% dplyr::select(CERQ_3:CERQ_4) 
+Acc <- cronbach.alpha(Accep_data)[[1]]
+Pos_Reap_data <- df_r %>% dplyr::select(CERQ_11:CERQ_12) 
+Pos_Reap <- cronbach.alpha(Pos_Reap_data)[[1]]
+Pos_Ref_data <- df_r %>% dplyr::select(CERQ_7:CERQ_8) 
+Pos_Ref <- cronbach.alpha(Pos_Ref_data)[[1]]
+Put_Pers_data <- df_r %>% dplyr::select(CERQ_13:CERQ_14) 
+Put_Pers <- cronbach.alpha(Put_Pers_data)[[1]]
+Ref_Plan_data <- df_r %>% dplyr::select(CERQ_9:CERQ_10) 
+Ref_Plan <- cronbach.alpha(Ref_Plan_data)[[1]]
+
+alpha_values <- c(WB, GAD,
+                            SB, OB, Rum, Cat,
+                            Acc, Pos_Reap, Pos_Ref, Put_Pers, Ref_Plan)
+
+Measure_name <- c("WEMWBS", "GAD-7", 
+                  "CERQ Self Blame", 
+                  "CERQ Other Blame", 
+              "CERQ Rumination",
+              "CERQ Catastrophising", 
+              "CERQ Acceptance",
+              "CERQ Positive Reappraisal", 
+              "CERQ Positive Refocus",
+              "CERQ Putting into Perspective",
+              "CERQ Refocus on Planning")
+
+data.frame(Measure_name, alpha_values) %>% mutate(
+  alpha_values = round(alpha_values, 2)) %>% 
+  dplyr::rename( `Measure` = Measure_name, 
+    `Cronbach alpha` = alpha_values ) %>% 
+  kable() %>% kable_paper() 
+```
+
+### Measure means and standard deviations
+```{r, echo = FALSE, message = FALSE}
+#creating summary table of measures
+
+ df %>% dplyr::select(WEMWBS_total, GAD_total,
+                      CERQ_Self_Blame,
+                      CERQ_Other_Blame, 
+              CERQ_Rumination, 
+              CERQ_Catastrophising, CERQ_Acceptance,
+              CERQ_Positive_Reappraisal, 
+              CERQ_Positive_Refocus, CERQ_Putting_into_Perspective, CERQ_Refocus_on_Planning) %>% 
+  rename(  `WEMWBS` = WEMWBS_total ,
+           `GAD-7` = GAD_total,
+           `CERQ Self Blame` = CERQ_Self_Blame,
+           `CERQ Other Blame` =  CERQ_Other_Blame,
+           `CERQ Rumination`=  CERQ_Rumination,
+           `CERQ Catastrophising` = CERQ_Catastrophising,
+           `CERQ Acceptance` =  CERQ_Acceptance,
+           `CERQ Positive Reappraisal` = CERQ_Positive_Reappraisal,
+           `CERQ Positive Refocus` =  CERQ_Positive_Refocus,
+           `CERQ Putting into Perspective` = CERQ_Putting_into_Perspective,
+           `CERQ Refocus on Planning` = CERQ_Refocus_on_Planning ) %>%
+  tbl_summary(type = c(`WEMWBS`,
+           `GAD-7`,
+           `CERQ Self Blame`,
+           `CERQ Other Blame`,
+           `CERQ Rumination`,
+           `CERQ Catastrophising`,
+           `CERQ Acceptance`,
+           `CERQ Positive Reappraisal`,
+           `CERQ Positive Refocus`,
+           `CERQ Putting into Perspective`,
+           `CERQ Refocus on Planning`) ~ "continuous2",
+                statistic = list(all_continuous()~ c("{mean} ({sd})",
+                                                     "{median} ({p25}, {p75})",
+      "{min}, {max}")), 
+             digits = all_continuous() ~ 2) %>%
+modify_header(label = "**Measure**") 
+
+
+```
+
+*****
+
+
+
+## Correlation analysis {.tabset .tabset-pills}
+For ease of interpretation, the CERQ sub-scales have been divided into two groups for the correlation analyses. The first group of sub-scales to be featured are the "maladaptive" emotion regulation sub-scales. The second group contains the "adaptive" emotion regulation sub-scales.
+
+### Maladaptive CERQ
+```{r, results = "asis", echo = FALSE, message = FALSE}
+ df %>% dplyr::select(WEMWBS_total,  GAD_total, CERQ_Self_Blame, CERQ_Other_Blame, 
+              CERQ_Rumination, CERQ_Catastrophising) %>%
+    rename(`WEMWBS` = WEMWBS_total ,
+           `GAD-7` = GAD_total,
+           `CERQ Self Blame` = CERQ_Self_Blame,
+           `CERQ Other Blame` =  CERQ_Other_Blame,
+           `CERQ Rumination`=  CERQ_Rumination,
+           `CERQ Catastrophising` = CERQ_Catastrophising) %>% 
+  correlation::correlation(redundant = TRUE) %>% summary() %>% display()
+  
+  # corrr::shave(upper = TRUE) %>%
+  # corrr::fashion(decimals = 2, na_print = "—") 
+
+# cor_data%>%
+#   # dplyr::mutate(
+#    #  rowname = c("1. WEMWBS", "2. GAD", "3. Self Blame", "4. Other Blame", "5. Rumination", "6. Catastrophisng")
+#    # ) %>%
+#   kable(
+#   #  caption = "Correlations between study measures",
+#   #  col.names = c("Measure", "1", "2", "3", "4", "5", "6")
+#     # ,row.names = c("", "1. WEMWBS", "2. GAD", "3. Self Blame", "4. Other Blame", "5. Rumination", "6. Catastrophisng")
+#   ) %>% kable_paper()
+
+
+
+``` 
+
+
+*****
+
+
+### Adaptive CERQ
+```{r, results = "asis", echo = FALSE, message = FALSE}
+df %>% dplyr::select(WEMWBS_total,  GAD_total, 
+                     CERQ_Acceptance, CERQ_Positive_Reappraisal, 
+              CERQ_Positive_Refocus, CERQ_Putting_into_Perspective, CERQ_Refocus_on_Planning) %>% 
+    rename(`WEMWBS` = WEMWBS_total ,
+           `GAD-7` = GAD_total,
+           `CERQ Acceptance` =  CERQ_Acceptance,
+           `CERQ Positive Reappraisal` = CERQ_Positive_Reappraisal,
+           `CERQ Positive Refocus` =  CERQ_Positive_Refocus,
+           `CERQ Putting into Perspective` = CERQ_Putting_into_Perspective,
+           `CERQ Refocus on Planning` = CERQ_Refocus_on_Planning ) %>%
+  correlation::correlation(redundant = TRUE) %>% summary() %>% display()
+
+# corrr::correlate() %>%
+#   corrr::shave(upper = TRUE) %>%
+#   corrr::fashion(decimals = 2, na_print = "—") 
+
+  
+# cor_data%>%
+  # dplyr::mutate(
+  #   rowname = c("1. WEMWBS", "2. GAD", "3. Acceptance", "4. Positive Reappraisal", "5. Positive Refocus", "6. Putting into Perspective", "7. Refocus on Planning")
+  # ) %>%
+  # kable(
+  #   caption = "Correlations between study measures",
+  #   col.names = c("Measure", "1", "2", "3", "4", "5", "6", "7")
+  # ) %>% kable_paper()
+
+``` 
+
+*****
+
+## Moderation analysis 
+The moderation analyses have been split into 2 sections. The first contains the analyses of the "maladaptive" CERQ sub-scales, whilst the second section contains the analyses of the "adaptive" CERQ sub-scales. 
+
+Each analysis features:
+
+* A regression table comparing both moderated and un-moderated regression analyses.
+* An ANOVA model comparison test to infer if the moderation model significantly improves the model.
+* A Johnson-Neyman area of significance plot.
+* A scatter plot for probing the effects of the interactions used to test for moderation. 
+
+Please note that all the predictor variables have been standardised prior to analysis, and are thus displayed as **Z** scores. 
+
+*****
+
+## Maladaptive CERQ {.tabset .tabset-pills}
+The following section is dedicated to testing the main hypothesis - that the use of "maladaptive" cognitive emotion regulation strategies will moderate the association between anxiety severity (GAD - 7) and mental well being (WEMWBS). Each of the "maladaptive emotion regulation strategies" subscales have been analysed separately. 
+
+### Self Blame  {.tabset .tabset-pills}
+The results below demonstrate a significant interaction between the Self Blame sub-scale of CERQ and GAD-7 in predicting mental wellbeing ( _B_ = 1.7, _p_ = .002). The inclusion of the interaction term significantly improved the model fit (change in adj Rsq = .056, _F_ (1, 123) = 10.02, _p_ = .002). 
+
+The Johnson Neyman plot shows that as Self Blame increases from -1.68 and .91 _Z_ scores, that the effect size of the influence of GAD-7 in predicting WEMWBS decreases. As the _Z_ score of Self Blame goes above .91, the effect size of GAD-7 is no longer significant in predicting WEMWBS. 
+
+This is simplified further through the probing plot. The plot shows a decreasing slope size between GAD-7 and WEMWBS as CERQ - Self Blame increases. 
+
+Thus the analysis for CERQ - Self Blame supports the hypothesis. This "maladaptive" emotion regulation strategy moderates the association between anxiety severity and mental wellbeing. For individuals with higher levels of anxiety severity, increased use of self blame is associated with improved mental wellbeing in comparison to decreased use of self blame. Yet for individuals with lower levels of anxiety severity, improved mental wellbeing is associated with decreased use of self blame.
+
+
+#### Regression analysis
+```{r, results = "asis", echo = FALSE, message = FALSE}
+m <- lm(WEMWBS_total ~ CERQ_Self_Blame_Z + GAD_Z + Age_Z + Gender , df)
+m1 <- lm(WEMWBS_total ~ CERQ_Self_Blame_Z * GAD_Z + Age_Z + Gender , df) 
+
+table_1 <- tbl_regression(m1) %>% 
+  add_glance_table(include = c(r.squared, adj.r.squared, 
+                               statistic, df.residual, p.value))
+
+table_2 <- tbl_regression(m) %>% 
+  add_glance_table(include = c(r.squared, adj.r.squared, 
+                               statistic, df.residual, p.value))
+
+tbl_merge(tbls = list(table_1, table_2),
+          tab_spanner = c("Moderation", "No moderation"))
+```
+
+ANOVA Model Comparison
+```{r, results = "asis", echo = FALSE, message = FALSE}
+options(knitr.kable.NA = '-')
+kable(anova(m,m1), digits = c(2,2,2,2,3,5)) %>% kable_paper()
+```
+
+
+*****
+
+#### Johnson Neyman Plot 
+```{r, results = "asis", echo = FALSE, message = FALSE}
+
+johnson_neyman(m1, modx = CERQ_Self_Blame_Z, pred = GAD_Z)
+
+```
+
+#### Probing plot
+```{r results = "asis", echo = FALSE, message = FALSE}
+ggplot(df, aes(x = GAD_total, y = WEMWBS_total, col = Self_Blame_lvl, linetype = Self_Blame_lvl)) +
+  geom_point(alpha = .7, position = "jitter") +
+  geom_smooth(method = "lm")  +
+  labs(x = "GAD-7", y = "WEMWBS", linetype = "CERQ - Self Blame", color = "CERQ - Self Blame", title = "Moderation Probing Plot") +
+  jtools::theme_apa(
+                    legend.use.title = "TRUE"
+                    )
+
+```
+
+
+
+*****
+
+
+### Other Blame {.tabset .tabset-pills}
+The results below demonstrate a significant interaction between the CERQ - Other Blame and GAD-7 in predicting WEMWBS ( _B_ = 2.8, _p_ = .002). The inclusion of the interaction term significantly improved the model fit (change in adj Rsq = .143, _F_ (1, 123) = 31.50, _p_ < .001). 
+
+The Johnson Neyman plot shows that as Other Blame increases from -.1.30 and .88 _Z_ scores, that the effect size of the influence of GAD-7 in predicting WEMWBS decreases. As the _Z_ score of Other Blame increases from 2.34 to 2.67, the effect size of GAD-7 increases in predicting WEMWBS. In between the Other Blame _Z_ score ranges of .88 and 2.34, GAD-7 does not significantly predict WEMWBS.  
+
+This is simplified further through the probing plot. The plot shows a decreasing slope size between GAD-7 and WEMWBS as CERQ - Other Blame increases. 
+
+Thus the moderation analysis for CERQ - Other Blame supports the hypothesis. This "maladaptive" emotion regulation strategy moderates the association between anxiety severity and mental wellbeing. For individuals with higher levels of anxiety severity, increased use of other blame is associated with improved mental wellbeing in comparison to decreased use of other blame. Yet for individuals with lower levels of anxiety severity, improved mental wellbeing is associated with decreased use of other blame.
+
+#### Regression Analysis
+```{r, results = "asis", echo = FALSE, message = FALSE}
+m <- lm(WEMWBS_total ~  CERQ_Other_Blame_Z + GAD_Z + Age_Z + Gender, df)
+m1 <- lm(WEMWBS_total ~  CERQ_Other_Blame_Z * GAD_Z + Age_Z + Gender, df)
+
+#%>% 
+  # tidy() %>%
+  # kable(col.names = c("Predictor", "B", "SE", "t", "p"),
+  #       digits = c(0, 2, 3, 2,3)) %>% 
+  # kable_paper()
+
+table_1 <- tbl_regression(m1)  %>% 
+  add_glance_table(include = c(r.squared, adj.r.squared, 
+                               statistic, df.residual, p.value))
+
+table_2 <- tbl_regression(m) %>% 
+  add_glance_table(include = c(r.squared, adj.r.squared, 
+                               statistic, df.residual, p.value))
+
+tbl_merge(tbls = list(table_1, table_2),
+          tab_spanner = c("Moderation", "No Moderation")) 
+```
+
+ANOVA model comparison
+```{r, results = "asis", echo = FALSE, message = FALSE}
+options(knitr.kable.NA = '-')
+kable(anova(m,m1), digits = c(2,2,2,2,3,5)) %>% kable_paper()
+```
+
+*****
+
+#### Johnson Neyman Plot
+```{r, results = "asis", echo = FALSE, message = FALSE}
+johnson_neyman(m1, modx = CERQ_Other_Blame_Z, pred = GAD_Z )
+
+
+```
+
+#### Probing Plot
+```{r, results = "asis", echo = FALSE, message = FALSE,}
+ggplot(df, aes(x = GAD_total, y = WEMWBS_total, col = Other_Blame_lvl, linetype = Other_Blame_lvl)) +
+  geom_point(alpha = .7, position = "jitter") +
+  geom_smooth(method = "lm") +
+  labs(x = "GAD-7", y = "WEMWBS", linetype = "CERQ - Other Blame", color = "CERQ - Other Blame", title = "Moderation Probing Plot") +
+  jtools::theme_apa(
+                    legend.use.title = "TRUE"
+                    )
+
+```
+
+
+
+*****
+
+
+### Rumination {.tabset .tabset-pills}
+The results below demonstrate a significant interaction between the CERQ - Rumination and GAD-7 in predicting WEMWBS ( _B_ = 1.6, _p_ = .004). The inclusion of the interaction term significantly improved the model fit (change in adj Rsq = .047, _F_ (1, 123) = 8.63, _p_ = .003). 
+
+The Johnson Neyman plot shows that as Rumination _Z_ score increases from -.1.79 and 1.07, that the effect size of the influence of GAD-7 in predicting WEMWBS decreases. As the _Z_ score of Rumination increases beyond 1.07, GAD-7 does not significantly predict WEMWBS.  
+
+This is simplified further through the probing plot. The plot shows a decreasing slope size between GAD-7 and WEMWBS as CERQ - Rumination increases. 
+
+Thus the moderation analysis for CERQ - Rumination supports the hypothesis. This "maladaptive" emotion regulation strategy moderates the association between anxiety severity and mental wellbeing. For individuals with higher levels of anxiety severity, increased use of rumination is associated with improved mental wellbeing in comparison to decreased use of rumination. Yet for individuals with lower levels of anxiety severity, improved mental wellbeing is associated with decreased use of rumination.
+
+#### Regression Analysis
+```{r, results = "asis", echo = FALSE, message = FALSE}
+m <- lm(WEMWBS_total ~ CERQ_Rumination_Z + GAD_Z + Age_Z + Gender, df)
+m1 <- lm(WEMWBS_total ~  CERQ_Rumination_Z * GAD_Z + Age_Z + Gender, df) 
+
+table_1 <- tbl_regression(m1)  %>% 
+  add_glance_table(include = c(r.squared, adj.r.squared, 
+                               statistic, df.residual, p.value))
+
+table_2 <- tbl_regression(m) %>% 
+  add_glance_table(include = c(r.squared, adj.r.squared, 
+                               statistic, df.residual, p.value))
+
+tbl_merge(tbls = list(table_1, table_2),
+          tab_spanner = c("Moderation", "No Moderation")) 
+```
+
+ANOVA model comparison
+```{r, results = "asis", echo = FALSE, message = FALSE}
+options(knitr.kable.NA = '-')
+kable(anova(m,m1), digits = c(2,2,2,2,3,5)) %>% kable_paper()
+```
+
+*****
+
+#### Johnson Neyman Plot 
+```{r, results = "asis", echo = FALSE, message = FALSE}
+johnson_neyman(m1, modx = CERQ_Rumination_Z, pred = GAD_Z )
+
+```
+
+#### Probing Plot
+```{r, results = "asis", echo = FALSE, message = FALSE}
+ggplot(df, aes(x = GAD_total, y = WEMWBS_total, col = Rumination_lvl, linetype = Rumination_lvl)) +
+  geom_point(alpha = .7, position = "jitter") +
+  geom_smooth(method = "lm")  +
+  labs(x = "GAD-7", y = "WEMWBS", linetype = "CERQ - Rumination", color = "CERQ - Rumination", title = "Moderation Probing Plot") +
+  jtools::theme_apa(
+                    legend.use.title = "TRUE"
+                    )
+
+```
+
+
+*****
+
+
+### Catastrophising {.tabset .tabset-pills}
+The results below demonstrate a significant interaction between the CERQ - Catastrophising and GAD-7 in predicting WEMWBS ( _B_ = 3.5, _p_ < .001). The inclusion of the interaction term significantly improved the model fit (change in adj Rsq = .204, _F_ (1, 123) = 42.20, _p_ < .001). 
+
+The Johnson Neyman plot shows that as CERQ Catastrophising increases from -.1.37 and .61 _Z_ scores, that the effect size of the influence of GAD-7 in predicting WEMWBS decreases. As the _Z_ score of CERQ Catastrophising increases from 1.60 to 2.48, the effect size of GAD-7 increases in predicting WEMWBS. In between the CERQ Catastrophising _Z_ score ranges of .61 and 1.60, GAD-7 does not significantly predict WEMWBS.   
+
+This is simplified further through the probing plot. The plot shows a decreasing slope size between GAD-7 and WEMWBS as CERQ - Catastrophising increases. 
+
+Thus the moderation analysis for CERQ - Catastrophising supports the hypothesis. This "maladaptive" emotion regulation strategy moderates the association between anxiety severity and mental wellbeing. For individuals with higher levels of anxiety severity, increased use of catastrophising is associated with improved mental wellbeing in comparison to decreased use of catastrophising. Yet for individuals with lower levels of anxiety severity, improved mental wellbeing is associated with decreased use of catastrophising.
+
+#### Regression Analysis
+```{r, results = "asis", echo = FALSE, message = FALSE}
+m <- lm(WEMWBS_total ~ CERQ_Catastrophising_Z + GAD_Z + Age_Z + Gender, df)
+m1 <- lm(WEMWBS_total ~ CERQ_Catastrophising_Z * GAD_Z + Age_Z+ Gender, df) #%>% 
+  # tidy() %>%
+  # kable(col.names = c("Predictor", "B", "SE", "t", "p"),
+  #       digits = c(0, 2, 3, 2,3)) %>% 
+  # kable_paper()
+
+table_1 <- tbl_regression(m1)  %>% 
+  add_glance_table(include = c(r.squared, adj.r.squared, 
+                               statistic, df.residual, p.value))
+
+table_2 <- tbl_regression(m) %>% 
+  add_glance_table(include = c(r.squared, adj.r.squared, 
+                               statistic, df.residual, p.value))
+
+tbl_merge(tbls = list(table_1, table_2),
+          tab_spanner = c("Moderation", "No Moderation")) 
+```
+
+ANOVA model comparison
+```{r, results = "asis", echo = FALSE, message = FALSE}
+options(knitr.kable.NA = '-')
+kable(anova(m,m1), digits = c(2,2,2,2,3,5)) %>% kable_paper()
+```
+
+*****
+
+#### Johnson Neyman Plot
+```{r, results = "asis", echo = FALSE, message = FALSE} 
+johnson_neyman(m1, modx = CERQ_Catastrophising_Z, pred = GAD_Z )
+
+``` 
+
+#### Probing Plot
+```{r, results = "asis", echo = FALSE, message = FALSE}
+ggplot(df, aes(x = GAD_total, y = WEMWBS_total, col = Catastrophising_lvl, linetype = Catastrophising_lvl)) +
+  geom_point(alpha = .7, position = "jitter") +
+  geom_smooth(method = "lm")  +
+  labs(x = "GAD-7", y = "WEMWBS", linetype = "CERQ - Catastrophising", color = "CERQ - Catastrophising", title = "Moderation Probing Plot") +
+  jtools::theme_apa(
+                    legend.use.title = "TRUE"
+                    )
+
+```
+
+
+*****
+
+## Adaptive CERQ {.tabset .tabset-pills}
+The following section is supplementary material. It is dedicated to exploring the remaining "adaptive" cognitive emotion regulation strategies, and to investigate if they moderate the association between anxiety severity (GAD-7) and mental well being (WEMWBS). As there is limited theoretical basis for the potential of "adaptive" cognitive emotion regulation strategies to interact with anxiety severity, no significant interactions are expected to be seen here. We acknowledge that an absence of a significant effect does formulate a hypothesis, yet we believe sharing the information of the analysis is still valuable. Each of the "adaptive" emotion regulation strategies sub-scales have been analysed separately.
+
+### Acceptance {.tabset .tabset-pills}
+The results below demonstrate no significant interaction between the CERQ - Acceptance and GAD-7 in predicting WEMWBS ( _B_ = -.79, _p_ = .14). The inclusion of the interaction term failed to significantly improve the model fit (change in adj Rsq = .007, _F_ (1, 123) = 2.19, _p_ = .14). 
+
+The Johnson Neyman plot shows that as CERQ Acceptanceincreases from -.1.30 and 1.72 _Z_ scores, that the effect size of the influence of GAD-7 in predicting WEMWBS increases. Below the CERQ Acceptance _Z_ score -1.30, GAD-7 does not significantly predict WEMWBS.   
+
+This is simplified further through the probing plot. The plot shows little difference in the slopes between GAD-7 and WEMWBS as CERQ - Acceptance increases. 
+
+This "adaptive" emotion regulation strategy does not moderate the association between anxiety severity and mental wellbeing. There is little to no difference between on the association between anxiety and mental wellbeing across the range of acceptance use. It can be inferred that the use of acceptance is beneficial for mental wellbeing, regardless of anxiety severity. 
+
+
+#### Regression Analysis
+```{r, results = "asis", echo = FALSE, message = FALSE}
+m <- lm(WEMWBS_total ~ CERQ_Acceptance_Z + GAD_Z + Age_Z + Gender, df)
+m1 <- lm(WEMWBS_total ~ CERQ_Acceptance_Z * GAD_Z + Age_Z + Gender, df) 
+
+table_1 <- tbl_regression(m1)  %>% 
+  add_glance_table(include = c(r.squared, adj.r.squared, 
+                               statistic, df.residual, p.value))
+
+table_2 <- tbl_regression(m) %>% 
+  add_glance_table(include = c(r.squared, adj.r.squared, 
+                               statistic, df.residual, p.value))
+
+tbl_merge(tbls = list(table_1, table_2),
+          tab_spanner = c("Moderation", "No Moderation")) 
+```
+
+ANOVA model comparison
+```{r, results = "asis", echo = FALSE, message = FALSE}
+options(knitr.kable.NA = '-')
+kable(anova(m,m1), digits = c(2,2,2,2,3,5)) %>% kable_paper()
+```
+
+*****
+
+#### Johnson Neyman Plot
+```{r, results = "asis", echo = FALSE, message = FALSE}
+
+johnson_neyman(m1, modx = CERQ_Acceptance_Z, pred = GAD_Z )
+
+```
+
+#### Probing Plot
+```{r, results = "asis", echo = FALSE, message = FALSE}
+ggplot(df, aes(x = GAD_total, y = WEMWBS_total, col = Acceptance_lvl, linetype = Acceptance_lvl)) +
+  geom_point(alpha = .7, position = "jitter") +
+  geom_smooth(method = "lm") +
+  labs(x = "GAD-7", y = "WEMWBS", linetype = "CERQ - Acceptance", color = "CERQ - Acceptance", title = "Moderation Probing Plot") +
+  jtools::theme_apa(
+                    legend.use.title = "TRUE"
+                    )
+
+```
+
+
+
+*****
+
+
+### Positive Refocus {.tabset .tabset-pills}
+The results below demonstrate a significant interaction between the CERQ - Positive Refocus and GAD-7 in predicting WEMWBS( _B_ = 1.6, _p_ = .004). The inclusion of the interaction term significantly improved the model fit (change in adj Rsq = .038, _F_ (1, 123) = 7.66, _p_ = .007). 
+
+The Johnson Neyman plot shows that as Positive Refocus _Z_ score increases from -.1.27 and 1.50, that the effect size of the influence of GAD-7 in predicting WEMWBS decreases. As the _Z_ score of Positive Refocus increases beyond 1.50 GAD-7 does not significantly predict WEMWBS. At no point does the effect size of GAD-7 increase above 0 across the range of Positive Refocus _Z_ scores.   
+
+This is simplified further through the probing plot. The plot shows a decreasing slope size between GAD-7 and WEMWBS as CERQ - Positive Refocus increases. 
+
+This "adaptive" emotion regulation strategy moderates the association between anxiety severity and mental wellbeing. This tells us that in individuals with higher levels of anxiety, increased use of positive refocus is associated with improved mental wellbeing in comparison to decreased use of positive refocus. It can be inferred that as the use of Positive Refocus increases, the association between anxiety severity and mental wellbeing weakens. 
+
+#### Regression Analysis
+```{r, results = "asis", echo = FALSE, message = FALSE}
+m <- lm(WEMWBS_total ~ CERQ_Positive_Refocus_Z + GAD_Z + Age_Z + Gender, df)
+m1 <- lm(WEMWBS_total ~ CERQ_Positive_Refocus_Z * GAD_Z + Age_Z + Gender, df) 
+
+table_1 <- tbl_regression(m1)  %>% 
+  add_glance_table(include = c(r.squared, adj.r.squared, 
+                               statistic, df.residual, p.value))
+
+table_2 <- tbl_regression(m) %>% 
+  add_glance_table(include = c(r.squared, adj.r.squared, 
+                               statistic, df.residual, p.value))
+
+tbl_merge(tbls = list(table_1, table_2),
+          tab_spanner = c("Moderation", "No Moderation")) 
+```
+
+ANOVA model comparison
+```{r, results = "asis", echo = FALSE, message = FALSE}
+options(knitr.kable.NA = '-')
+kable(anova(m,m1), digits = c(2,2,2,2,3,5)) %>% kable_paper()
+```
+
+*****
+
+#### Johnson Neyman Plot
+```{r, results = "asis", echo = FALSE, message = FALSE}
+
+johnson_neyman(m1, modx = CERQ_Positive_Refocus_Z, pred = GAD_Z )
+```
+
+#### Probing Plot
+```{r, results = 'asis', echo = FALSE, message = FALSE}
+ggplot(df, aes(x = GAD_total, y = WEMWBS_total, col = Pos_Refocus_lvl, linetype = Pos_Refocus_lvl)) +
+  geom_point(alpha = .7, position = "jitter") +
+  geom_smooth(method = "lm")  +
+  labs(x = "GAD-7", y = "WEMWBS", linetype = "CERQ - Positive Refocus", color = "CERQ - Positive Refocus", title = "Moderation Probing Plot") +
+  jtools::theme_apa(
+                    legend.use.title = "TRUE"
+                    )
+
+```
+
+
+
+
+*****
+
+### Putting into Perspective {.tabset .tabset-pills}
+The results below demonstrate no significant interaction between the CERQ - Putting into Perspective and GAD-7 in predicting WEMWBS ( _B_ = .87, _p_ = .10). The inclusion of the interaction term failed to significantly improve the model fit (change in adj Rsq = .008, _F_ (1, 123) = 2.68, _p_ = .10). 
+
+The Johnson Neyman plot shows that as CERQ Putting into Perspective increases from -2.20 and 1.60 _Z_ scores, that the effect size of the influence of GAD-7 in predicting WEMWBS decreases. Above the CERQ Putting into Perspective _Z_ score 1.60, GAD-7 does not significantly predict WEMWBS.   
+
+This is simplified further through the probing plot. The plot shows little difference in the slopes between GAD-7 and WEMWBS as CERQ - Putting into Perspective increases. 
+
+This "adaptive" emotion regulation strategy does not moderate the association between anxiety severity and mental wellbeing. There is little to no difference between on the association between anxiety and mental wellbeing across the range of Putting into Perspective use. It can be inferred that the use of Putting into Perspective is beneficial for mental wellbeing, regardless of anxiety severity. 
+
+#### Regression Analysis
+```{r, results = "asis", echo = FALSE, message = FALSE}
+m <- lm(WEMWBS_total ~ CERQ_Putting_into_Perspective_Z + GAD_Z + Age_Z + Gender, df)
+m1 <- lm(WEMWBS_total ~ CERQ_Putting_into_Perspective_Z * GAD_Z + Age_Z + Gender, df) 
+
+table_1 <- tbl_regression(m1)  %>% 
+  add_glance_table(include = c(r.squared, adj.r.squared, 
+                               statistic, df.residual, p.value))
+
+table_2 <- tbl_regression(m) %>% 
+  add_glance_table(include = c(r.squared, adj.r.squared, 
+                               statistic, df.residual, p.value))
+
+tbl_merge(tbls = list(table_1, table_2),
+          tab_spanner = c("Moderation", "No Moderation")) 
+```
+
+ANOVA model comparison
+```{r, results = "asis", echo = FALSE, message = FALSE}
+options(knitr.kable.NA = '-')
+kable(anova(m,m1), digits = c(2,2,2,2,3,5)) %>% kable_paper()
+```
+
+*****
+
+#### Johnson Neyman Plot
+```{r, results = "asis", echo = FALSE, message = FALSE}
+johnson_neyman(m1, modx = CERQ_Putting_into_Perspective_Z, pred = GAD_Z )
+```
+
+#### Probing Plot
+```{r, results = 'asis', echo = FALSE, message = FALSE}
+ggplot(df, aes(x = GAD_total, y = WEMWBS_total, col = Put_Perspective_lvl, linetype = Put_Perspective_lvl)) +
+  geom_point(alpha = .7, position = "jitter") +
+  geom_smooth(method = "lm") +
+  labs(x = "GAD-7", y = "WEMWBS", linetype = "CERQ - Putting into Perspective", color = "CERQ - Putting into Perspective", title = "Moderation Probing Plot") +
+  jtools::theme_apa(
+                    legend.use.title = "TRUE"
+                    )
+
+```
+
+
+
+*****
+
+
+### Refocus on Planning {.tabset .tabset-pills}
+The results below demonstrate no significant interaction between the CERQ - Refocus on Planning and GAD-7 in predicting WEMWBS ( _B_ = .24, _p_ = .7). The inclusion of the interaction term failed to significantly improve the model fit (change in adj Rsq = -.005, _F_ (1, 123) = .16, _p_ = .69). 
+
+The Johnson Neyman plot shows that the effect of CERQ Refocus on Planning on the influence of GAD-7 in predicting WEMWBS is significant across all of it's _Z_ score range. As CERQ Refocus on Planning _Z_ score increases from -2.27 and 1.38 , the effect size of the influence of GAD-7 in predicting WEMWBS decreases but remains significant.   
+
+This is simplified further through the probing plot. The plot shows little difference in the slopes between GAD-7 and WEMWBS as CERQ - Refocus on Planning increases. 
+
+This "adaptive" emotion regulation strategy does not moderate the association between anxiety severity and mental wellbeing. There is little to no difference between on the association between anxiety and mental wellbeing across the range of Refocus on Planning use. It can be inferred that the use of Refocus on Planning is beneficial for mental wellbeing, regardless of anxiety severity. 
+
+#### Regression analysis
+```{r, results = "asis", echo = FALSE, message = FALSE}
+m <- lm(WEMWBS_total ~ CERQ_Refocus_on_Planning_Z + GAD_Z + Age_Z + Gender, df)
+m1 <- lm(WEMWBS_total ~ CERQ_Refocus_on_Planning_Z * GAD_Z + Age_Z + Gender, df) 
+
+table_1 <- tbl_regression(m1)  %>% 
+  add_glance_table(include = c(r.squared, adj.r.squared, 
+                               statistic, df.residual, p.value))
+
+table_2 <- tbl_regression(m) %>% 
+  add_glance_table(include = c(r.squared, adj.r.squared, 
+                               statistic, df.residual, p.value))
+
+tbl_merge(tbls = list(table_1, table_2),
+          tab_spanner = c("Moderation", "No Moderation")) 
+```
+
+ANOVA model comparison 
+```{r, results = "asis", echo = FALSE, message = FALSE}
+options(knitr.kable.NA = '-')
+kable(anova(m,m1), digits = c(2,2,2,2,3,5)) %>% kable_paper()
+```
+
+*****
+
+#### Johnson Neyman Plot
+```{r, results = "asis", echo = FALSE, message = FALSE}
+
+johnson_neyman(m1, modx = CERQ_Refocus_on_Planning_Z, pred = GAD_Z )
+
+```
+
+
+#### Probing Plot
+```{r, echo = FALSE, message = FALSE}
+ggplot(df, aes(x = GAD_total, y = WEMWBS_total, col = Refocus_Planning_lvl, linetype = Refocus_Planning_lvl)) +
+  geom_point(alpha = .7, position = "jitter") +
+  geom_smooth(method = "lm") +
+  labs(x = "GAD-7", y = "WEMWBS", linetype = "CERQ - Refocus on Planning", color = "CERQ - Refocus on Planning", title = "Moderation Probing Plot") +
+  jtools::theme_apa(
+                    legend.use.title = "TRUE"
+                    )
+
+```
+
+*****
+
+### Positive Reappraisal{.tabset .tabset-pills}
+
+The results below demonstrate no significant interaction between the CERQ - Positive Reappraisal and GAD-7 in predicting WEMWBS ( _B_ = -.15, _p_ = .8). The inclusion of the interaction term failed to significantly improve the model fit (change in adj Rsq = -.006, _F_ (1, 123) = .07, _p_ = .8). 
+
+The Johnson Neyman plot shows that the effect of CERQ Positive Reappraisal on the influence of GAD-7 in predicting WEMWBS increases across the _Z_ score ranges between -1.60 and 1.51 and is significant. As the CERQ Positive Reappraisal _Z_ score decreases below -1.60, the effect size of the influence of GAD-7 in predicting WEMWBS is not longer significant. At no point does the effect size of GAD-7 increase above 0.   
+
+This is simplified further through the probing plot. The plot shows little difference in the slopes between GAD-7 and WEMWBS as CERQ - Positive Reappraisal increases. 
+
+This "adaptive" emotion regulation strategy does not moderate the association between anxiety severity and mental wellbeing. There is little to no difference between on the association between anxiety and mental wellbeing across the range of Positive Reappraisal use. It can be inferred that the use of Positive Reappraisal is beneficial for mental wellbeing, regardless of anxiety severity. 
+
+#### Regression Analysis
+
+```{r, results = "asis", echo = FALSE, message = FALSE}
+m <- lm(WEMWBS_total ~ CERQ_Positive_Reappraisal_Z + GAD_Z + Age_Z + Gender, df)
+m1 <- lm(WEMWBS_total ~ CERQ_Positive_Reappraisal_Z * GAD_Z + Age_Z + Gender, df) 
+
+table_1 <- tbl_regression(m1)  %>% 
+  add_glance_table(include = c(r.squared, adj.r.squared, 
+                               statistic, df.residual, p.value))
+
+table_2 <- tbl_regression(m) %>% 
+  add_glance_table(include = c(r.squared, adj.r.squared, 
+                               statistic, df.residual, p.value))
+
+
+
+tbl_merge(tbls = list(table_1, table_2),
+          tab_spanner = c("Moderation", "No Moderation")) 
+```
+
+ANOVA model comparison
+```{r, results = "asis", echo = FALSE, message = FALSE}
+options(knitr.kable.NA = '-')
+kable(anova(m,m1), digits = c(2,2,2,2,3,5)) %>% kable_paper()
+```
+
+*****
+
+#### Johnson Neyman Plot
+```{r, results = "asis", echo = FALSE, message = FALSE}
+johnson_neyman(m1, modx = CERQ_Positive_Reappraisal_Z, pred = GAD_Z )
+```
+
+#### Probing Plot
+```{r, echo = FALSE, message = FALSE}
+ggplot(df, aes(x = GAD_total, y = WEMWBS_total, col = Pos_Reappraisal_lvl, linetype = Pos_Reappraisal_lvl)) +
+  geom_point(alpha = .7, position = "jitter") +
+  geom_smooth(method = "lm") +
+  labs(x = "GAD-7", y = "WEMWBS", linetype = "CERQ - Positive Reappraisal", color = "CERQ - Positive Reappraisal", title = "Moderation Probing Plot") +
+  jtools::theme_apa(
+                    legend.use.title = "TRUE"
+                    )
+
+```
+
+
+*****
+
+## Package References 
+
+Allaire J, Xie Y, Dervieux C, McPherson J, Luraschi J, Ushey K, Atkins A, Wickham H, Cheng J, Chang W, Iannone R (2023).  _rmarkdown: Dynamic Documents for R_. R package version 2.25, <https://github.com/rstudio/rmarkdown>.
+
+Long, J. A., & Long, M. J. A. (2019). Package ‘interactions’. See https://interactions. jacob-long. com.
+
+Lüdecke D (2023). sjPlot: Data Visualization for Statistics in Social Science. R package version 2.8.15, https://CRAN.R-project.org/package=sjPlot.
+
+Makowski, D., Wiernik, B. M., Patil, I., Lüdecke, D., & Ben-Shachar, M. S. (2022). correlation: Methods for correlation analysis [R package]. https://CRAN.R-project.org/package=correlation (Original work published 2020)
+
+Rizopoulos, D. (2007). ltm: An R package for latent variable modeling and item response analysis. Journal of statistical software, 17, 1-25.
+
+Robinson, D., Gomez, M., Demeshev, B., Menne, D., Nutter, B., Johnston, L., ... & Wickham, H. (2015). Package ‘broom’.
+
+Sjoberg, D. D., Whiting, K., Curry, M., Lavery, J. A., & Larmarange, J. (2021). Reproducible summary tables with the gtsummary package. The R journal, 13(1), 570-580.
+
+Wickham H, Averick M, Bryan J, Chang W, McGowan LD, François R, Grolemund G, Hayes A, Henry L, Hester J, Kuhn M, Pedersen TL, Miller E, Bache SM, Müller K, Ooms J, Robinson D, Seidel DP, Spinu V, Takahashi K, Vaughan D, Wilke C, Woo K, Yutani H (2019). “Welcome to the tidyverse.” Journal of Open Source Software, 4(43), 1686. doi:10.21105/joss.01686.
+
+Xie Y, Allaire J, Grolemund G (2018). _R Markdown: The Definitive Guide_. Chapman and Hall/CRC, Boca Raton, Florida. ISBN 9781138359338, <https://bookdown.org/yihui/rmarkdown>.
+
+Xie Y, Dervieux C, Riederer E (2020). _R Markdown Cookbook_. Chapman and Hall/CRC, Boca Raton, Florida. ISBN 9780367563837, <https://bookdown.org/yihui/rmarkdown-cookbook>.
+
+Zhu, H., Travison, T., Tsai, T., Beasley, W., Xie, Y., & Yu, G. (2019). Package ‘kableExtra’.
